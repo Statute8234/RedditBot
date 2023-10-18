@@ -1,5 +1,4 @@
-import openpyxl
-import praw, random
+import openpyxl, praw, random,string
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from keras.preprocessing.text import Tokenizer
@@ -7,15 +6,17 @@ from keras.preprocessing.sequence import pad_sequences
 from keras.layers import Embedding, LSTM, Dense, Input, concatenate
 from keras.models import Model
 from keras.optimizers import Adam
-import string
+import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from nltk.stem import PorterStemmer
+from nltk.corpus import stopwords
 import numpy as np
 from datetime import datetime
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 from keras.models import Sequential
+stopwords = nltk.corpus.stopwords.words('english')
 # path
 path = r"C:\Users\danie\OneDrive\Desktop\Data.xlsx"
 workbook = openpyxl.load_workbook(path)
@@ -51,6 +52,7 @@ for submission in reddit.subreddit(subreddit_name).new(limit=None):
         current_row += 1
 workbook.close()
 # preprocess text
+ps = PorterStemmer()
 def preprocess_text(text):
     words = word_tokenize(text)
     filtered_words = [ps.stem(w.lower()) for w in words if w.isalpha() and w.lower() not in stopwords and w not in string.punctuation and not w.isdigit()]
@@ -98,6 +100,7 @@ user_input_text_padded = pad_sequences(user_input_text_seq, maxlen=max_text_leng
 user_input_numerical = np.array([[random.randint(0, 100), random.randint(0, 100), random.randint(0, 100)]])
 predicted_word_index = np.argmax(model.predict([user_input_text_padded, user_input_numerical]))
 predicted_word = [word for word, index in tokenizer.word_index.items() if index == predicted_word_index][0]
+print(predicted_word)
 # Build models for score, comments, and awards
 score_model = build_model(max_words, max_text_length)
 comments_model = build_model(max_words, max_text_length)
@@ -114,6 +117,7 @@ user_input_padded = pad_sequences(user_input_sequence, maxlen=max_text_length)
 avg_score = round(np.mean(score_model.predict(user_input_padded)))
 avg_comments = round(np.mean(comments_model.predict(user_input_padded)))
 avg_awards = round(np.mean(awards_model.predict(user_input_padded)))
+print(predicted_word)
 print(f"Predicted Score: {avg_score}")
 print(f"Predicted Comments: {avg_comments}")
 print(f"Predicted Awards: {avg_awards}")
