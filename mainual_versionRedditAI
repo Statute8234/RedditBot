@@ -10,12 +10,15 @@ import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from nltk.stem import PorterStemmer
-from nltk.corpus import stopwords
 import numpy as np
 from datetime import datetime
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 from keras.models import Sequential
+from autocorrect import Speller
+from spellchecker import SpellChecker
+spell = Speller(lang='en')
+spell = SpellChecker()
 stopwords = nltk.corpus.stopwords.words('english')
 avrigeTitleSize = []
 # path
@@ -119,7 +122,7 @@ merged = concatenate([text_lstm, numerical_dense])
 output = Dense(max_words, activation='softmax')(merged) 
 model = Model(inputs=[text_input, numerical_input], outputs=output)
 model.compile(optimizer=Adam(lr=0.1), loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-model.fit([X_text, X_numerical], y_encoded, epochs=10, batch_size=64, validation_split=0.2)
+model.fit([X_text, X_numerical], y_encoded, epochs=10, batch_size=64, validation_split=0.5)
 # User input and prediction
 user_input_text = "Man I wish I had multiple arms"
 user_input_text_seq = tokenizer.texts_to_sequences([user_input_text])
@@ -137,22 +140,45 @@ score_model.fit(X_train_text, X_train['Score'].values, batch_size=64, epochs=10,
 comments_model.fit(X_train_text, X_train['Comments'].values, batch_size=64, epochs=10, validation_split=0.5)
 awards_model.fit(X_train_text, X_train['Awards'].values, batch_size=64, epochs=10, validation_split=0.5)
 # Predict for user input
-TItlelist = []
-avrigeTitleSize = sum(avrigeTitleSize)//len(avrigeTitleSize)
-for _ in range(round(random.triangular(1,avrigeTitleSize,5))):
-    user_input_text_seq = tokenizer.texts_to_sequences([user_input_text])
-    user_input_text_padded = pad_sequences(user_input_text_seq, maxlen=max_text_length)
-    user_input_numerical = np.array([[random.randint(0, 100), random.randint(0, 100), random.randint(0, 100)]])
-    predicted_word_index = np.argmax(model.predict([user_input_text_padded, user_input_numerical]))
-    predicted_word = [word for word, index in tokenizer.word_index.items() if index == predicted_word_index][0]
-    # ---
-    user_input_processed = preprocess_text(predicted_word)
-    user_input_sequence = tokenizer.texts_to_sequences([user_input_processed])
-    user_input_padded = pad_sequences(user_input_sequence, maxlen=max_text_length)
-    TItlelist.append(predicted_word)
-NewTitle = ' '.join(TItlelist)
-print("title:",NewTitle)
-avg_score, ci_score, avg_comments, ci_comments, avg_awards, ci_awards = get_predictions(NewTitle, tokenizer, max_text_length, score_model, comments_model, awards_model)
-print(f"Predicted Score: {avg_score} (Confidence Interval: {ci_score})")
-print(f"Predicted Comments: {avg_comments} (Confidence Interval: {ci_comments})")
-print(f"Predicted Awards: {avg_awards} (Confidence Interval: {ci_awards})")
+def generate_title():
+    TItlelist = []
+    for _ in range(random.randint(2, 10)):
+        user_input_text_seq = tokenizer.texts_to_sequences([user_input_text])
+        user_input_text_padded = pad_sequences(user_input_text_seq, maxlen=max_text_length)
+        user_input_numerical = np.array([[random.randint(0, 100), random.randint(0, 100), random.randint(0, 100)]])
+        predicted_word_index = np.argmax(model.predict([user_input_text_padded, user_input_numerical]))
+        predicted_word = [word for word, index in tokenizer.word_index.items() if index == predicted_word_index][0]
+        user_input_processed = preprocess_text(predicted_word)
+        user_input_sequence = tokenizer.texts_to_sequences([user_input_processed])
+        user_input_padded = pad_sequences(user_input_sequence, maxlen=max_text_length)
+        TItlelist.append(predicted_word)
+    return TItlelist
+# spell check
+def spellCheck(input_string):
+    input_string = input_string.lower()
+    tokenized_words = word_tokenize(input_string)
+    filtered_words = [word for word in tokenized_words if word.isalpha() and word not in stopwords]
+    corrected_words = [spell.correction(word) for word in filtered_words]
+    deduplicated_words = []
+    prev_word = None
+    for word in corrected_words:
+        if word != prev_word:
+            deduplicated_words.append(word)
+        prev_word = word
+    corrected_string = ' '.join(deduplicated_words)
+    return corrected_string
+# suggest title
+def suggest_title():
+    try:
+        TItlelist = generate_title()
+        corrected_word = spellCheck(' '.join(TItlelist))  
+        avg_score, ci_score, avg_comments, ci_comments, avg_awards, ci_awards = get_predictions(corrected_word, tokenizer, max_text_length, score_model, comments_model, awards_model)
+        print("title:", corrected_word)
+        print(f"Predicted Score: {avg_score} (Confidence Interval: {ci_score})")
+        print(f"Predicted Comments: {avg_comments} (Confidence Interval: {ci_comments})")
+        print(f"Predicted Awards: {avg_awards} (Confidence Interval: {ci_awards})")
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
+
+if __name__ == '__main__':
+    suggest_title()
