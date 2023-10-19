@@ -90,7 +90,7 @@ def get_predictions(user_input, tokenizer, max_text_length, score_model, comment
     std_awards = np.std(awards_prediction)
     # Calculate confidence interval (assuming normal distribution)
     confidence_level = 0.95
-    z_score = 1.96
+    z_score = 1.00
     confidence_interval_score = (avg_score - z_score * std_score, avg_score + z_score * std_score)
     confidence_interval_comments = (avg_comments - z_score * std_comments, avg_comments + z_score * std_comments)
     confidence_interval_awards = (avg_awards - z_score * std_awards, avg_awards + z_score * std_awards)
@@ -121,10 +121,13 @@ numerical_dense = Dense(100)(numerical_input)
 merged = concatenate([text_lstm, numerical_dense])
 output = Dense(max_words, activation='softmax')(merged) 
 model = Model(inputs=[text_input, numerical_input], outputs=output)
-model.compile(optimizer=Adam(lr=0.1), loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+model.compile(optimizer=Adam(lr=0.1), loss='huber_loss', metrics=['accuracy'])
 model.fit([X_text, X_numerical], y_encoded, epochs=10, batch_size=64, validation_split=0.5)
 # User input and prediction
-user_input_text = "Man I wish I had multiple arms"
+list = []
+for submission in reddit.subreddit(subreddit_name).top(limit=10):
+    list.append(submission.title)
+user_input_text = random.choice(list)
 user_input_text_seq = tokenizer.texts_to_sequences([user_input_text])
 user_input_text_padded = pad_sequences(user_input_text_seq, maxlen=max_text_length)
 user_input_numerical = np.array([[random.randint(0, 100), random.randint(0, 100), random.randint(0, 100)]])
