@@ -1,4 +1,11 @@
 import openpyxl, praw, random,string
+import concurrent.futures
+import requests
+from PIL import Image
+from io import BytesIO
+import numpy as np
+from keras.models import Sequential
+from keras.preprocessing.image import ImageDataGenerator
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from keras.preprocessing.text import Tokenizer
@@ -65,9 +72,9 @@ def preprocess_text(text):
 # build model
 def build_model(max_words, max_text_length):
     model = Sequential()
-    model.add(Embedding(input_dim=max_words, output_dim=128, input_length=max_text_length))
+    model.add(Embedding(input_dim=max_words, output_dim=100, input_length=max_text_length))
     model.add(LSTM(100))
-    model.add(Dense(1, activation='sigmoid'))  # Linear activation for regression
+    model.add(Dense(200, activation='sigmoid'))  # Linear activation for regression
     model.compile(optimizer='SGD', loss='huber_loss')
     return model
 # Function to preprocess user input and get predictions
@@ -89,7 +96,6 @@ def get_predictions(user_input, tokenizer, max_text_length, score_model, comment
     std_comments = np.std(comments_prediction)
     std_awards = np.std(awards_prediction)
     # Calculate confidence interval (assuming normal distribution)
-    confidence_level = 0.95
     z_score = 1.00
     confidence_interval_score = (avg_score - z_score * std_score, avg_score + z_score * std_score)
     confidence_interval_comments = (avg_comments - z_score * std_comments, avg_comments + z_score * std_comments)
@@ -124,10 +130,12 @@ model = Model(inputs=[text_input, numerical_input], outputs=output)
 model.compile(optimizer=Adam(lr=0.1), loss='huber_loss', metrics=['accuracy'])
 model.fit([X_text, X_numerical], y_encoded, epochs=10, batch_size=64, validation_split=0.5)
 # User input and prediction
-list = []
-for submission in reddit.subreddit(subreddit_name).top(limit=10):
-    list.append(submission.title)
-user_input_text = random.choice(list)
+submissionlList = []
+NewImageList = []
+for submission in reddit.subreddit("meme").top(limit=10):
+    submissionlList.append(submission.title)
+    NewImageList.append(submission.url)
+user_input_text = random.choice(submissionlList)
 user_input_text_seq = tokenizer.texts_to_sequences([user_input_text])
 user_input_text_padded = pad_sequences(user_input_text_seq, maxlen=max_text_length)
 user_input_numerical = np.array([[random.randint(0, 100), random.randint(0, 100), random.randint(0, 100)]])
@@ -182,6 +190,61 @@ def suggest_title():
         print(f"Predicted Awards: {avg_awards} (Confidence Interval: {ci_awards})")
     except Exception as e:
         print(f"An error occurred: {str(e)}")
+# ------------------------------------------- image
+categories = [worksheet.cell(row=i, column=7).value for i in range(2, worksheet.max_row + 1)]
+image_urls = [worksheet.cell(row=i, column=6).value for i in range(2, worksheet.max_row + 1)]
+# Define an image data generator for data augmentation and preprocessing
+datagen = ImageDataGenerator(
+    rescale=1./255,  # Normalize pixel values
+    rotation_range=20,  # Random rotation up to 20 degrees
+    width_shift_range=0.1,  # Random horizontal shift
+    height_shift_range=0.1,  # Random vertical shift
+    shear_range=0.2,  # Shearing transformations
+    zoom_range=0.2,  # Random zoom
+    horizontal_flip=True,  # Random horizontal flip
+    fill_mode='nearest'  # Fill mode for empty spaces after augmentation
+)
+target_size = (224, 224)
+# process image
+def process_image(url):
+    try:
+        response = requests.get(url)
+        if response.status_code == 200:
+            img = Image.open(BytesIO(response.content))
+            img = img.convert('RGB')
+            img = img.resize(target_size)
+            img_array = np.array(img)  # Convert image to numpy array
+            img_array = img_array / 255.0
+            return img_array
+    except Exception as e:
+        print(f"Error processing image from URL {url}: {str(e)}")
+# Process images concurrently
+def get_prediction(image_url):
+    # Process the input image concurrently
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        processed_images = list(executor.map(process_image, [image_url]))
+    
+    if not processed_images or all(img is None for img in processed_images):
+        return "Error: Unable to process the image."
+    # Preprocess images using the data generator
+    model = Sequential()
+    preprocessed_images = datagen.flow(np.array(processed_images), batch_size=len(processed_images))
+    predictions = model.predict(preprocessed_images)
 
+    predicted_category_index = np.argmax(predictions, axis=1)
+
+    if predicted_category_index.shape == (1,):
+        predicted_category_index = predicted_category_index[0]
+        predicted_category_index = int(predicted_category_index)
+        predicted_category_name = categories[predicted_category_index]
+        result = f"Predicted Category: {predicted_category_name}"
+    else:
+        result = "Error: Unable to predict category."
+    return result
+# -- main
 if __name__ == '__main__':
-    suggest_title()
+    for _ in range(10):
+        suggest_title()
+        image_url = random.choice(NewImageList)
+        prediction_result = get_prediction(image_url)
+        print(prediction_result)
