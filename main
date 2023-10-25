@@ -4,6 +4,7 @@ import string
 import random
 import requests
 import re
+import urllib.request
 from autocorrect import Speller
 import concurrent.futures
 import numpy as np
@@ -24,6 +25,7 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Embedding, LSTM, Dense
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.applications.resnet50 import ResNet50, preprocess_input, decode_predictions
+from tensorflow.keras.preprocessing import image as keras_image
 from tensorflow.keras.preprocessing import image
 # sklearn
 from sklearn.model_selection import train_test_split
@@ -111,8 +113,9 @@ model = Sequential([
 model.compile(loss='sparse_categorical_crossentropy', optimizer=Adam(learning_rate=0.01))
 model.fit(input_sequences, output_sequences, epochs=50, batch_size=128)
 # Generate Titles
-def generate_title(seed_text, max_length=25):
+def generate_title(seed_text, max_length=20):
     for _ in range(max_length):
+        NewTitle = ""
         encoded_text = tokenizer.texts_to_sequences([seed_text])[0]
         encoded_text = pad_sequences([encoded_text], maxlen=input_sequences.shape[1])
         predicted_word_index = np.argmax(model.predict(encoded_text), axis=-1)
@@ -122,15 +125,16 @@ def generate_title(seed_text, max_length=25):
                 predicted_word = word
                 break
         if predicted_word:
+            NewTitle += " " + predicted_word
             seed_text += " " + predicted_word
         else:
             break
-    return seed_text
+    return NewTitle
 # make seed text
 def seedText():
     submissionlList = []
     for x in range(10):
-        submission = reddit.subreddit("meme").random()
+        submission = reddit.subreddit("memes").random()
         submissionlList.append(submission.title)
     user_input_text = random.choice(submissionlList)
     return user_input_text
@@ -160,27 +164,43 @@ score_model.fit(X_train_text, X_train['Score'].values, batch_size=64, epochs=10,
 comments_model.fit(X_train_text, X_train['Comments'].values, batch_size=64, epochs=10, validation_split=0.5)
 awards_model.fit(X_train_text, X_train['Awards'].values, batch_size=64, epochs=10, validation_split=0.5)
 # Predict for user input
-def get_predictions(user_input, tokenizer, max_text_length, score_model, comments_model, awards_model):
-    processed_input = preprocess_text(user_input)
-    # Tokenize and pad the input text
-    input_sequence = pad_sequences(tokenizer.texts_to_sequences([processed_input]), maxlen=max_text_length)
-    # Get predictions for score, comments, and awards
-    score_prediction = round(score_model.predict(input_sequence).mean())
-    comments_prediction = round(comments_model.predict(input_sequence).mean())
-    awards_prediction = round(awards_model.predict(input_sequence).mean())
-    # Calculate average predictions
-    avg_score = round(np.mean(score_prediction))
-    avg_comments = round(np.mean(comments_prediction))
-    avg_awards = round(np.mean(awards_prediction))
-    # Calculate confidence interval (assuming normal distribution)
+def get_predictions(user_input, image_url, tokenizer, max_text_length, score_model, comments_model, awards_model):
+    processed_input_text = preprocess_text(user_input)
+    input_text_sequence = pad_sequences(tokenizer.texts_to_sequences([processed_input_text]), maxlen=max_text_length)
+    # Process the image data
+    response = requests.get(image_url, stream=True)
+    img = Image.open(BytesIO(response.content)).resize((224, 224))  # Resize the image to match model input size
+    x = image.img_to_array(img)
+    x = np.expand_dims(x, axis=0)
+    x = preprocess_input(x)
+    # Make predictions
+    score_prediction = np.mean(score_model.predict(input_text_sequence))
+    comments_prediction = np.mean(comments_model.predict(input_text_sequence))
+    awards_prediction = np.mean(awards_model.predict(input_text_sequence))
+    # Predict image data using the respective models
+    img_score_prediction = np.mean(score_model.predict(x))
+    img_comments_prediction = np.mean(comments_model.predict(x))
+    img_awards_prediction = np.mean(awards_model.predict(x))
+    # Combine predictions as needed
+    combined_score_prediction = (score_prediction + img_score_prediction) / 2
+    combined_comments_prediction = (comments_prediction + img_comments_prediction) / 2
+    combined_awards_prediction = (awards_prediction + img_awards_prediction) / 2
     z_score = 1.96
-    std_score = np.std(score_model.predict(input_sequence))
-    std_comments = np.std(comments_model.predict(input_sequence))
-    std_awards = np.std(awards_model.predict(input_sequence))
-    confidence_interval_score = (score_prediction - z_score * std_score, score_prediction + z_score * std_score)
-    confidence_interval_comments = (comments_prediction - z_score * std_comments, comments_prediction + z_score * std_comments)
-    confidence_interval_awards = (awards_prediction - z_score * std_awards, awards_prediction + z_score * std_awards)
-    return score_prediction, confidence_interval_score, comments_prediction, confidence_interval_comments, awards_prediction, confidence_interval_awards
+    n = input_text_sequence.shape[0]
+    # Calculate confidence intervals and return predictions
+    ci_score = (
+        combined_score_prediction - z_score * np.std(combined_score_prediction) / np.sqrt(n),
+        combined_score_prediction + z_score * np.std(combined_score_prediction) / np.sqrt(n)
+    )
+    ci_comments = (
+        combined_comments_prediction - z_score * np.std(combined_comments_prediction) / np.sqrt(n),
+        combined_comments_prediction + z_score * np.std(combined_comments_prediction) / np.sqrt(n)
+    )
+    ci_awards = (
+        combined_awards_prediction - z_score * np.std(combined_awards_prediction) / np.sqrt(n),
+        combined_awards_prediction + z_score * np.std(combined_awards_prediction) / np.sqrt(n)
+    )
+    return round(combined_score_prediction), ci_score, round(combined_comments_prediction), ci_comments, round(combined_awards_prediction), ci_awards
 # correct spelling
 spell = Speller(lang='en')
 lemmatizer = WordNetLemmatizer()
@@ -190,22 +210,22 @@ def correctSpelling(text):
     corrected_sentences = []
     for sentence in sentences:
         words = tokenizer.tokenize(sentence)
-        # Correct spelling
         corrected_words = [spell(w) for w in words]
-        # Correct grammar and lemmatize words
         corrected_words = [lemmatizer.lemmatize(w, pos=wordnet.VERB) if pos_tag([w])[0][1].startswith('V') else w for w in corrected_words]
+        corrected_sentence = ' '.join(corrected_words)
+        corrected_sentences.append(corrected_sentence)
     preprocessed_text = ' '.join(corrected_sentences)
     return preprocessed_text
 # remove unsupported characters
 def remove_unsupported_characters(text):
     unsupported_char_pattern = re.compile(r'[^\x00-\x7F]+')
     cleaned_text = re.sub(unsupported_char_pattern, '', text)
-    return cleaned_text
+    encoded_text = cleaned_text.encode('utf-8', errors='ignore')
+    return encoded_text
 # ------ use images to perdict Score, Comments, Awards, flair
 labels_column = data['Flair'].astype(str)
-labels = [label for label in labels_column if remove_unsupported_characters(label) is not None]
-def predict_image_from_url(image_url, model):
-    global labels
+custom_labels = [label for label in labels_column if remove_unsupported_characters(label) is not None]
+def predict_image_from_url(image_url, model,custom_labels):
     response = requests.get(image_url, stream=True)
     img = Image.open(BytesIO(response.content))
     img = img.convert('RGB')
@@ -218,17 +238,20 @@ def predict_image_from_url(image_url, model):
     top_prediction = decoded_predictions[0][0]
     predicted_label = top_prediction[1]
     confidence_score = top_prediction[2]
-    return predicted_label, confidence_score
+    if predicted_label in custom_labels:
+        return predicted_label, confidence_score
+    else:
+        return "None", confidence_score
 # print
 seed_text = seedText()
-generated_title = generate_title(seed_text)
-generated_title = correctSpelling(generated_title)
-avg_score, ci_score, avg_comments, ci_comments, avg_awards, ci_awards = get_predictions(generated_title, tokenizer, MAX_TEXT_LENGTH, score_model, comments_model, awards_model)
-predicted_label, confidence_score = predict_image_from_url("https://i.redd.it/6pmk8uas5rvb1.jpg", resnet_model)
-print("seed title:",seed_text)
-print("title:", generated_title)
-print(f"Predicted Score: {avg_score} (Confidence Interval: {ci_score})")
-print(f"Predicted Comments: {avg_comments} (Confidence Interval: {ci_comments})")
-print(f"Predicted Awards: {avg_awards} (Confidence Interval: {ci_awards})")
+generated_title = correctSpelling(generate_title(seed_text))
+image_url = "https://source.unsplash.com/random"
+predicted_score, ci_score, predicted_comments, ci_comments, predicted_awards, ci_awards = get_predictions(generated_title, image_url, tokenizer, MAX_TEXT_LENGTH, score_model, comments_model, awards_model)
+predicted_label, confidence_score = predict_image_from_url(image_url, resnet_model, custom_labels)
+print("seed title:", seed_text)
+print("Generated Title:", generated_title)
+print(f"Predicted Score: {predicted_score} (Confidence Interval: {ci_score})")
+print(f"Predicted Comments: {predicted_comments} (Confidence Interval: {ci_comments})")
+print(f"Predicted Awards: {predicted_awards} (Confidence Interval: {ci_awards})")
 print(f"Predicted Label: {predicted_label}")
 print(f"Confidence Score: {confidence_score:.2f}")
