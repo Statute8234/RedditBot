@@ -10,6 +10,8 @@ import concurrent.futures
 import numpy as np
 from PIL import Image
 from io import BytesIO
+import secrets
+import time
 # nltk
 import nltk
 from nltk import word_tokenize, pos_tag
@@ -27,7 +29,7 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.applications.resnet50 import ResNet50, preprocess_input, decode_predictions
 from tensorflow.keras.preprocessing import image as keras_image
 from tensorflow.keras.preprocessing import image
-# sklearn
+# sklear
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 # pandas
@@ -56,11 +58,9 @@ except FileNotFoundError:
 sheet = workbook.active
 # Reddit Info
 reddit = praw.Reddit(
-    client_id="hgbzLwGHjRaNJuup7UoYfQ",
-    client_secret="FSdaN5gLS8rRj76-ZhV37l8vdx9gyw",
-    user_agent="Display1903",
-    username='Ill_Independent3989',
-    password='PoRoTEPcGRM9VC'
+    client_id="nY4WstIZvogjrDxmIWyKPw",
+    client_secret="jKZGZhgITUi8rd_xgMtlkscMx62JoA",
+    user_agent="test-script",
 )
 current_row = 2
 subreddit_name = "randomscreenshot"
@@ -229,10 +229,32 @@ def predict_image_from_url(image_url, model,custom_labels):
         return predicted_label, confidence_score
     else:
         return "None", confidence_score
+# generate random string
+def generate_random_string(length=12):
+    characters = string.ascii_letters
+    randomString = ''.join(secrets.choice(characters) for _ in range(length))
+    return randomString + ".png"
+# conver to png
+def download_and_convert_to_png(url):
+    output_path = generate_random_string()
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        image = Image.open(BytesIO(response.content))
+        if image.format != "PNG":
+            image = image.convert("RGBA")
+            png_output = BytesIO()
+            image.save(png_output, format="PNG")
+            png_content = png_output.getvalue()
+            with open(output_path, "wb") as png_file:
+                png_file.write(png_content)
+            return output_path
+    except Exception as e:
+         return 0
 # print
 seed_text = seedText()
 generated_title = correctSpelling(generate_title(seed_text))
-image_url = "https://source.unsplash.com/random"
+image_url = requests.get("https://source.unsplash.com/random")
 avg_score, ci_score, avg_comments, ci_comments, avg_awards, ci_awards = get_predictions(generated_title, tokenizer, MAX_TEXT_LENGTH, score_model, comments_model, awards_model)
 predicted_label, confidence_score = predict_image_from_url(image_url, resnet_model,custom_labels)
 print("seed title:", seed_text)
@@ -242,14 +264,7 @@ print(f"Predicted Comments: {avg_comments} (Confidence Interval: {ci_comments})"
 print(f"Predicted Awards: {avg_awards} (Confidence Interval: {ci_awards})")
 print(f"Predicted Label: {predicted_label}")
 print(f"Confidence Score: {confidence_score:.2f}")
-# create post
-post_title = generated_title
-subreddit = reddit.subreddit(subreddit_name)
-flair = predicted_label
-subreddit.submit_image(
-    title = "fantastic image quality",
-    image_path = image_url,
-    nsfw = False,
-    spoiler = False,
-)
-print("Post submitted successfully!")
+# create pos
+from reddit_poster import post_to_reddit
+imageInformation = download_and_convert_to_png(image_url)
+post_to_reddit(imageInformation,"Image")
