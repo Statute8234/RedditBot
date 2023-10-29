@@ -235,10 +235,10 @@ def generate_random_string(length=12):
     randomString = ''.join(secrets.choice(characters) for _ in range(length))
     return randomString + ".png"
 # conver to png
-def download_and_convert_to_png(url):
+def download_image(url):
     output_path = generate_random_string()
     try:
-        response = requests.get(url)
+        response = requests.get(url, stream=True)
         response.raise_for_status()
         image = Image.open(BytesIO(response.content))
         if image.format != "PNG":
@@ -248,23 +248,19 @@ def download_and_convert_to_png(url):
             png_content = png_output.getvalue()
             with open(output_path, "wb") as png_file:
                 png_file.write(png_content)
-            return output_path
+        else:
+            output_path = image
+        return output_path
     except Exception as e:
-         return 0
+        print(f"Error: {e}")
+        return None
 # print
 seed_text = seedText()
 generated_title = correctSpelling(generate_title(seed_text))
-image_url = requests.get("https://source.unsplash.com/random")
-avg_score, ci_score, avg_comments, ci_comments, avg_awards, ci_awards = get_predictions(generated_title, tokenizer, MAX_TEXT_LENGTH, score_model, comments_model, awards_model)
-predicted_label, confidence_score = predict_image_from_url(image_url, resnet_model,custom_labels)
-print("seed title:", seed_text)
-print("Generated Title:", generated_title)
-print(f"Predicted Score: {avg_score} (Confidence Interval: {ci_score})")
-print(f"Predicted Comments: {avg_comments} (Confidence Interval: {ci_comments})")
-print(f"Predicted Awards: {avg_awards} (Confidence Interval: {ci_awards})")
-print(f"Predicted Label: {predicted_label}")
-print(f"Confidence Score: {confidence_score:.2f}")
+image_url = "https://source.unsplash.com/random.com"
 # create pos
-from reddit_poster import post_to_reddit
-imageInformation = download_and_convert_to_png(image_url)
-post_to_reddit(imageInformation,"Image")
+useImage = download_image(image_url)
+data_to_store = "{}\n{}".format(useImage,generated_title)
+with open('data.txt', 'w') as file:
+    file.write(data_to_store)
+print("Data has been stored.")
