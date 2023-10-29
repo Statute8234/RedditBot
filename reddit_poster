@@ -18,3 +18,7 @@ def post_to_reddit(image_url,title):
         spoiler=False
     )
     print(f'Image posted successfully! Here is the link: {submission.url}')
+
+with open('data.txt', 'r') as file:
+    stored_data = file.readlines()
+post_to_reddit(stored_data[0].strip(),stored_data[1].strip())
