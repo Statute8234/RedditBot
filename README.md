@@ -8,7 +8,7 @@ This script collects data from Reddit using the PRAW library, preprocesses it, t
 - [Features](#features)
 - [Imports](#Imports)
 - [Rating: 7/10](#Rating)
-- 
+  
 # About
 
 This script combines various functionalities, including data collection from Reddit, data preprocessing and cleaning, model training and prediction, image processing, and file handling. It fetches data from a Reddit subreddit using the PRAW library, preprocesses the data, and uses pre-trained models for generating titles, scores, comments, and awards. The script also downloads images from URLs, converts them to PNG format, and predicts labels using a pre-trained model. It also handles Excel files for data storage and updating.
