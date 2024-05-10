@@ -58,12 +58,12 @@ except FileNotFoundError:
 sheet = workbook.active
 # Reddit Info
 reddit = praw.Reddit(
-    client_id="nY4WstIZvogjrDxmIWyKPw",
-    client_secret="jKZGZhgITUi8rd_xgMtlkscMx62JoA",
-    user_agent="test-script",
+    client_id="***",
+    client_secret="***",
+    user_agent="***",
 )
 current_row = 2
-subreddit_name = "randomscreenshot"
+subreddit_name = "***"
 subreddit = reddit.subreddit(subreddit_name)
 num_posts = subreddit.subscribers
 print(f"Looking through {num_posts} posts....")
