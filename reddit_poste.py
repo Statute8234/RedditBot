@@ -3,13 +3,13 @@ import time
 def post_to_reddit(image_url,title):
     time.sleep(7)
     reddit = praw.Reddit(
-        client_id="hgbzLwGHjRaNJuup7UoYfQ",
-        client_secret="FSdaN5gLS8rRj76-ZhV37l8vdx9gyw",
-        user_agent="Display1903",
-        username='Ill_Independent3989',
-        password='PoRoTEPcGRM9VC'
+        client_id="***",
+        client_secret="***",
+        user_agent="***",
+        username='***',
+        password='***'
     )
-    subreddit_name = 'randomscreenshot'
+    subreddit_name = '***'
     subreddit = reddit.subreddit(subreddit_name)
     submission = subreddit.submit_image(
         title=title,
