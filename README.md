@@ -26,7 +26,8 @@ This script collects data from Reddit using the PRAW library, preprocesses it, t
 
 - [About](#about)
 - [Features](#features)
-- [Imports](#Imports)
+- [Installation](#installation)
+- [Usage](#usage)
 - [Rating: 7/10](#Rating)
   
 # About
@@ -39,9 +40,13 @@ Copilot is an AI companion that can assist with various tasks and topics. The sc
 The script can preprocess and clean the data using techniques like removing stopwords, punctuation, emojis, HTML tags, and URLs, tokenizing, lemmatizing, and stemping the text data for model training and prediction. It can use pre-trained models for tasks such as generating titles, scores, comments, and awards for posts. The script can also use natural language generation models, regression or classification models, or image processing models like ResNet or VGG to predict labels for images.
 Finally, the script can handle Excel files for data storage and updating. It can create, read, write, and update Excel files using the openpyxl library, store original and generated data in separate sheets or columns, and use formulas or functions to calculate metrics or statistics. The script can also format Excel files using styles, colors, or charts.
 
-# Imports
+# Installation
+1) HTTPS - https://github.com/[User]/RedditBot.git
+2) CLONE - git@github.com:{User]/RedditBot.git
 
-openpyxl, praw, string, random, requests, re, urllib.request, autocorrect, concurrent.futures, numpy, PIL, io, secrets, time, nltk, word_tokenize, pos_tag, nltk.corpus, wordnet, stopwords, nltk.tokenize, sent_tokenize, nltk.stem, WordNetLemmatizer, PorterStemmer, RegexpTokenizer
+# Usage
+
+This script is useful for automated data collection and analysis on GitHub, such as running a workflow to fetch and process Reddit data, storing results in a repository, and collaborating on machine learning projects. It can also be used for version control of training scripts, datasets, and trained models. GitHub's collaborative features like pull requests and issues can be used for collaborative development. The script can also be integrated into a CI/CD pipeline for automatic testing and validation of updates. It can also be deployed using GitHub Actions for continuous deployment. An example workflow is provided, which automates the execution of the script by setting up a daily scheduled task and allowing manual triggering via the GitHub Actions interface. The script installs dependencies, runs the script, and uses GitHub secrets for sensitive information. This workflow allows for automated and continuous deployment of trained models and data processing pipelines.
 
 # Rating
 
