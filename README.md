@@ -1,5 +1,25 @@
 # RedditBot
 
+[![Static Badge](https://img.shields.io/badge/openpyxl-ivory)](https://openpyxl.readthedocs.io/en/stable/)
+[![Static Badge](https://img.shields.io/badge/praw-ivory)](https://praw.readthedocs.io/en/stable/)
+[![Static Badge](https://img.shields.io/badge/string-ivory)](https://docs.python.org/3/library/string.html)
+[![Static Badge](https://img.shields.io/badge/random-ivory)](https://docs.python.org/3/library/random.html)
+[![Static Badge](https://img.shields.io/badge/requests-ivory)](https://docs.python-requests.org/en/latest/)
+[![Static Badge](https://img.shields.io/badge/re-ivory)](https://docs.python.org/3/library/re.html)
+[![Static Badge](https://img.shields.io/badge/urllib.request-ivory)](https://docs.python.org/3/library/urllib.request.html)
+[![Static Badge](https://img.shields.io/badge/autocorrect-ivory)](https://github.com/fsondej/autocorrect)
+[![Static Badge](https://img.shields.io/badge/concurrent.futures-ivory)](https://docs.python.org/3/library/concurrent.futures.html)
+[![Static Badge](https://img.shields.io/badge/numpy-ivory)](https://numpy.org/doc/)
+[![Static Badge](https://img.shields.io/badge/PIL-ivory)](https://pillow.readthedocs.io/en/stable/)
+[![Static Badge](https://img.shields.io/badge/BytesIO-ivory)](https://docs.python.org/3/library/io.html#io.BytesIO)
+[![Static Badge](https://img.shields.io/badge/secrets-ivory)](https://docs.python.org/3/library/secrets.html)
+[![Static Badge](https://img.shields.io/badge/time-ivory)](https://docs.python.org/3/library/time.html)
+[![Static Badge](https://img.shields.io/badge/nltk-ivory)](https://www.nltk.org/)
+[![Static Badge](https://img.shields.io/badge/tensorflow-ivory)](https://www.tensorflow.org/api_docs)
+[![Static Badge](https://img.shields.io/badge/sklearn-ivory)](https://scikit-learn.org/stable/documentation.html)
+[![Static Badge](https://img.shields.io/badge/pandas-ivory)](https://pandas.pydata.org/pandas-docs/stable/)
+
+
 This script collects data from Reddit using the PRAW library, preprocesses it, trains models using Keras/TensorFlow, and processes images using a pre-trained ResNet50 model. It also handles file handling, handling Excel files for storage and updating data, and writes processed data to a text file.
 
 ## Table of Contents
